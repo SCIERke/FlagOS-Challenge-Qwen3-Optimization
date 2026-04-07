@@ -14,23 +14,35 @@ PATCH_DIR="$WORKSPACE/knowledge/rotary"
 PATCH_FILE="$PATCH_DIR/flaggems.patch"
 
 mkdir -p "$PATCH_DIR"
-if [ -d "$FLAGGEMS/.git" ]; then
-    git -C "$FLAGGEMS" diff > "$PATCH_FILE"
-    if [ ! -s "$PATCH_FILE" ]; then
-        git -C "$FLAGGEMS" diff HEAD > "$PATCH_FILE" 2>/dev/null || true
+
+# Only track the specific files we actually modified
+TARGETS=(
+    "src/flag_gems/runtime/backend/_ascend/fused/rotary_embedding.py"
+    "src/flag_gems/modules/rotary_embedding.py"
+)
+PREFIX="FlagGems"
+
+: > "$PATCH_FILE"
+for RELPATH in "${TARGETS[@]}"; do
+    FULL="$FLAGGEMS/$RELPATH"
+    GIT_PATH="$PREFIX/$RELPATH"
+    if [ ! -f "$FULL" ]; then
+        echo "# WARNING: $FULL not found, skipping" >> "$PATCH_FILE"
+        continue
     fi
-else
-    # No git in FlagGems — diff against a reference copy if exists, else snapshot changed files
-    echo "# FlagGems has no .git; patch generated from working copy diffs" > "$PATCH_FILE"
+    ORIG=$(git show "HEAD:$GIT_PATH" 2>/dev/null || true)
+    if [ -z "$ORIG" ]; then
+        # File not tracked in monorepo git — diff against itself is empty
+        echo "# $GIT_PATH: not in git HEAD, skipping diff" >> "$PATCH_FILE"
+        continue
+    fi
     diff -u \
-        <(git show HEAD:"FlagGems/src/flag_gems/runtime/backend/_ascend/fused/rotary_embedding.py" 2>/dev/null || echo "") \
-        "$FLAGGEMS/src/flag_gems/runtime/backend/_ascend/fused/rotary_embedding.py" \
+        <(echo "$ORIG") \
+        "$FULL" \
+        --label "a/$GIT_PATH" \
+        --label "b/$GIT_PATH" \
         >> "$PATCH_FILE" || true
-    diff -u \
-        <(git show HEAD:"FlagGems/src/flag_gems/modules/rotary_embedding.py" 2>/dev/null || echo "") \
-        "$FLAGGEMS/src/flag_gems/modules/rotary_embedding.py" \
-        >> "$PATCH_FILE" || true
-fi
+done
 
 echo "[push] Patch written: $PATCH_FILE ($(wc -l < "$PATCH_FILE") lines)"
 
