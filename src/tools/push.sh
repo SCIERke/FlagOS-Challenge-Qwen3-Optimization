@@ -14,35 +14,13 @@ PATCH_DIR="$WORKSPACE/knowledge/rotary"
 PATCH_FILE="$PATCH_DIR/flaggems.patch"
 
 mkdir -p "$PATCH_DIR"
-
-# Only track the specific files we actually modified
-TARGETS=(
-    "src/flag_gems/runtime/backend/_ascend/fused/rotary_embedding.py"
-    "src/flag_gems/modules/rotary_embedding.py"
-)
-PREFIX="FlagGems"
-
-: > "$PATCH_FILE"
-for RELPATH in "${TARGETS[@]}"; do
-    FULL="$FLAGGEMS/$RELPATH"
-    GIT_PATH="$PREFIX/$RELPATH"
-    if [ ! -f "$FULL" ]; then
-        echo "# WARNING: $FULL not found, skipping" >> "$PATCH_FILE"
-        continue
-    fi
-    ORIG=$(git show "HEAD:$GIT_PATH" 2>/dev/null || true)
-    if [ -z "$ORIG" ]; then
-        # File not tracked in monorepo git — diff against itself is empty
-        echo "# $GIT_PATH: not in git HEAD, skipping diff" >> "$PATCH_FILE"
-        continue
-    fi
-    diff -u \
-        <(echo "$ORIG") \
-        "$FULL" \
-        --label "a/$GIT_PATH" \
-        --label "b/$GIT_PATH" \
-        >> "$PATCH_FILE" || true
-done
+# The patch for FlagGems (git-ignored) is maintained manually in knowledge/rotary/flaggems.patch.
+# It was created once from known good diffs. If you need to update it, edit it directly.
+if [ -s "$PATCH_FILE" ]; then
+    echo "[push] FlagGems patch already exists: $PATCH_FILE ($(wc -l < "$PATCH_FILE") lines)"
+else
+    echo "[push] WARNING: $PATCH_FILE is empty or missing — FlagGems changes will not be synced."
+fi
 
 echo "[push] Patch written: $PATCH_FILE ($(wc -l < "$PATCH_FILE") lines)"
 

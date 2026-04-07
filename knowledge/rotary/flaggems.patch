@@ -1,2 +1,30 @@
-# FlagGems/src/flag_gems/runtime/backend/_ascend/fused/rotary_embedding.py: not in git HEAD, skipping diff
-# FlagGems/src/flag_gems/modules/rotary_embedding.py: not in git HEAD, skipping diff
+--- a/FlagGems/src/flag_gems/runtime/backend/_ascend/fused/rotary_embedding.py
++++ b/FlagGems/src/flag_gems/runtime/backend/_ascend/fused/rotary_embedding.py
+@@ -172,6 +172,8 @@ def apply_rotary_pos_emb(
+     position_ids: Optional[torch.IntTensor] = None,
+     rotary_interleaved: bool = False,
++    inplace: bool = False,
+ ):
+     """
+     Apply rotary position embedding to q and k
+@@ -183,6 +183,8 @@ def apply_rotary_pos_emb(
+         position_ids: (*, ), optional, position ids for each token
+         rotary_interleaved: whether the head_dim is rotated in an interleaved way
++        inplace: API compatibility flag with other backends. This Ascend path
++            currently returns new buffers in all cases.
+
+--- a/FlagGems/src/flag_gems/modules/rotary_embedding.py
++++ b/FlagGems/src/flag_gems/modules/rotary_embedding.py
+@@ -58,7 +58,12 @@ def gems_rope_forward(
+         logger.debug("GEMS CUSTOM ROPE FORWARD")
+         # Fallback to pure python implementation
+         return flag_gems.apply_rotary_pos_emb(
+-            query, key, cos, sin, position_ids, rotary_interleaved, inplace
++            query,
++            key,
++            cos,
++            sin,
++            position_ids,
++            rotary_interleaved=rotary_interleaved,
++            inplace=inplace,
+         )
