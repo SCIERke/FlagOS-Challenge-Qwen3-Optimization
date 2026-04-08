@@ -28,3 +28,23 @@
 +            rotary_interleaved=rotary_interleaved,
 +            inplace=inplace,
          )
+
+--- a/FlagGems/src/flag_gems/runtime/backend/_ascend/fused/rotary_embedding.py
++++ b/FlagGems/src/flag_gems/runtime/backend/_ascend/fused/rotary_embedding.py
+@@ -250,10 +250,15 @@ def apply_rotary_pos_emb(
+                 if rotary_interleaved:
+                     cos = torch.repeat_interleave(cos, 2, dim=-1)
+                     sin = torch.repeat_interleave(sin, 2, dim=-1)
+-                orig_cos = cos
+-                orig_sin = sin
+-                for _ in range(q_shape[0] - 1):
+-                    cos = torch.cat((cos, orig_cos), dim=0)
+-                    sin = torch.cat((sin, orig_sin), dim=0)
++                # Tile cos/sin only for no-position_ids (4D) path; gathered cos is already num_tokens.
++                if position_ids is None:
++                    orig_cos = cos
++                    orig_sin = sin
++                    for _ in range(q_shape[0] - 1):
++                        cos = torch.cat((cos, orig_cos), dim=0)
++                        sin = torch.cat((sin, orig_sin), dim=0)
+             rotary_embedding_siso_kernel[grid](
