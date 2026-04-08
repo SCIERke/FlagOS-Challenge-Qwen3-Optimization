@@ -27,3 +27,6 @@ environments/**/*.whl
 .DS_Store
 .idea/
 .vscode/
+
+# Local sync tool state
+.sync_send_state.tsv
